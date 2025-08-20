@@ -20,15 +20,24 @@ const authenticate = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired.' });
+    }
     res.status(401).json({ error: 'Invalid token.' });
   }
 };
 
 const authorize = (...roles) => {
   return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required.' });
+    }
+    
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ 
-        error: 'Access denied. Insufficient permissions.' 
+        error: 'Access denied. Insufficient permissions.',
+        required: roles,
+        current: req.user.role
       });
     }
     next();

@@ -24,6 +24,60 @@ class LLMProvider {
         messages: [
           {
             role: 'system',
+            content: 'You are a support ticket classifier. Respond only with valid JSON matching the required schema.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 150,
+        temperature: 0.1
+      }, {
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+
+      const content = response.data.choices[0].message.content.trim();
+      const result = JSON.parse(content);
+      
+      const latencyMs = Date.now() - startTime;
+      
+      return {
+        ...result,
+        modelInfo: {
+          provider: 'deepseek',
+          model: 'deepseek-chat',
+          promptVersion: this.promptVersion,
+          latencyMs
+        }
+      };
+      
+    } catch (error) {
+      console.error('LLM Classification Error:', error.message);
+      // Fallback to stub mode on error
+      return this._stubClassify(text, startTime);
+    }
+  }
+
+  async draft(ticketText, articles) {
+    const startTime = Date.now();
+    
+    if (this.stubMode) {
+      return this._stubDraft(ticketText, articles, startTime);
+    }
+    
+    try {
+      const prompt = this._getDraftPrompt(ticketText, articles);
+      
+      const response = await axios.post(`${this.baseURL}/chat/completions`, {
+        model: 'deepseek-chat',
+        messages: [
+          {
+            role: 'system',
             content: 'You are a helpful support agent. Draft professional, helpful responses to support tickets using the provided knowledge base articles. Always include numbered citations. Respond only with valid JSON matching the required schema.'
           },
           {
@@ -186,11 +240,13 @@ Respond with JSON only:
 // KB Search Service
 class KBSearchService {
   constructor() {
-    this.Article = require('../models').Article;
+    // Require models here to avoid circular dependency
+    this.getArticleModel = () => require('../models').Article;
   }
 
   async search(query, category = null, limit = 3) {
     try {
+      const Article = this.getArticleModel();
       let searchFilter = { status: 'published' };
       
       // Add category filter if provided
@@ -202,7 +258,7 @@ class KBSearchService {
       
       if (query) {
         // Text search with scoring
-        articles = await this.Article.find({
+        articles = await Article.find({
           ...searchFilter,
           $text: { $search: query }
         }, {
@@ -214,7 +270,7 @@ class KBSearchService {
         // If no text search results, try tag-based search
         if (articles.length === 0) {
           const queryWords = query.toLowerCase().split(' ');
-          articles = await this.Article.find({
+          articles = await Article.find({
             ...searchFilter,
             $or: [
               { tags: { $in: queryWords } },
@@ -224,7 +280,7 @@ class KBSearchService {
         }
       } else {
         // Category-based search
-        articles = await this.Article.find(searchFilter)
+        articles = await Article.find(searchFilter)
           .sort({ updatedAt: -1 })
           .limit(limit);
       }
