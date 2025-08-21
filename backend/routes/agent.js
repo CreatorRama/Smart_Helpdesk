@@ -35,6 +35,8 @@ router.post('/triage',
         return res.status(404).json({ error: 'Ticket not found' });
       }
 
+      console.log("ram\n\n",ticket);
+
       if (!['open', 'waiting_human'].includes(ticket.status)) {
         return res.status(400).json({ 
           error: 'Ticket cannot be triaged in current status',
@@ -42,14 +44,14 @@ router.post('/triage',
         });
       }
 
-      console.log(JSON.stringify({
-        timestamp: new Date().toISOString(),
-        level: 'info',
-        traceId: req.traceId,
-        message: 'Manual triage triggered',
-        ticketId,
-        triggeredBy: req.user._id
-      }));
+      // console.log(JSON.stringify({
+      //   timestamp: new Date().toISOString(),
+      //   level: 'info',
+      //   traceId: req.traceId,
+      //   message: 'Manual triage triggered',
+      //   ticketId,
+      //   triggeredBy: req.user._id
+      // }));
 
       // Start triage asynchronously
       const triageResult = await agentService.triageTicket(ticketId, req.traceId);

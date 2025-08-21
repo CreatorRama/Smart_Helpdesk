@@ -11,6 +11,7 @@ class LLMProvider {
 
   async classify(text) {
     const startTime = Date.now();
+    console.log(this.stubMode);
     
     if (this.stubMode) {
       return this._stubClassify(text, startTime);

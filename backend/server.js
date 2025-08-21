@@ -7,11 +7,11 @@ const morgan = require("morgan");
 require("dotenv").config();
 
 const authRoutes = require("./routes/auth");
-const kbRoutes = require("./routes/kb");
+const kbRoutes = require("./routes/KB");
 const ticketRoutes = require("./routes/tickets");
 const agentRoutes = require("./routes/agent");
 const configRoutes = require("./routes/config");
-const auditRoutes = require("./routes/audit");
+const { auditRouter } = require("./routes/audit");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -111,7 +111,7 @@ app.use("/api/kb", generalLimiter, kbRoutes);
 app.use("/api/tickets", generalLimiter, ticketRoutes);
 app.use("/api/agent", generalLimiter, agentRoutes);
 app.use("/api/config", generalLimiter, configRoutes);
-app.use("/api/audit", generalLimiter, auditRoutes);
+app.use("/api/audit", generalLimiter, auditRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
